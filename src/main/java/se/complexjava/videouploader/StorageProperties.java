@@ -9,6 +9,8 @@ public class StorageProperties {
     /**
      * Folder location for storing files
      */
+
+    //set this value from outside?
     private String location = "./videos/";
 
     public String getLocation() {

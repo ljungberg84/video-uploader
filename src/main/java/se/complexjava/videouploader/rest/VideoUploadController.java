@@ -11,7 +11,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import se.complexjava.videouploader.service.StorageService;
 
 @RestController
-@RequestMapping("/upload")
+@RequestMapping("/file-management")
 public class VideoUploadController {
 
     private final StorageService storageService;
@@ -21,27 +21,19 @@ public class VideoUploadController {
         this.storageService = storageService;
     }
 
-//change to return names of all videos or videos by user?
-//    @GetMapping
-//    public String listUploadedFiles(Model model) throws IOException {
-//
-//        model.addAttribute("files", storageService.loadAll().map(
-//                path -> MvcUriComponentsBuilder.fromMethodName(VideoUploadController.class,
-//                        "serveFile", path.getFileName().toString()).build().toString())
-//                .collect(Collectors.toList()));
-//
-//        return "uploadForm";
-//    }
 
+    @PostMapping("/{userId}")
+    public ResponseEntity<String> handleVideoFileUpload(@PathVariable long userId, @RequestParam("file") MultipartFile file, RedirectAttributes redirectAttributes) {
 
-    @PostMapping
-    public ResponseEntity<String> handleFileUpload(@RequestParam("file") MultipartFile file, RedirectAttributes redirectAttributes) {
-
-        storageService.store(file);
-//        redirectAttributes.addFlashAttribute("message",
-//                "You successfully uploaded " + file.getOriginalFilename() + "!");
-        //return "redirect:/";
-
+        storageService.store(file, userId);
+        //send jms message
         return ResponseEntity.status(HttpStatus.CREATED).body("Video successfully uploaded.");
+    }
+
+
+    @DeleteMapping("/{userId}/{title}")
+    public ResponseEntity<String> deleteVideoFile(@PathVariable long userId, @PathVariable String title) {
+        storageService.delete(userId, title);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).body("Video successfully deleted");
     }
 }
