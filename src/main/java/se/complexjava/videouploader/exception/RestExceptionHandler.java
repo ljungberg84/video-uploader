@@ -14,7 +14,7 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(StorageFileNotFoundException.class)
     public ResponseEntity<?> handleStorageFileNotFound(StorageFileNotFoundException e) {
 
-        return ResponseEntity.notFound().build();
+        return ResponseEntity.status(HttpStatus.I_AM_A_TEAPOT).body(e.getMessage());
     }
 
     @ExceptionHandler(IOException.class)
