@@ -10,6 +10,8 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import se.complexjava.videouploader.service.StorageService;
 
+import java.io.IOException;
+
 @RestController
 @RequestMapping("/file-management")
 public class VideoUploadController {
@@ -24,7 +26,6 @@ public class VideoUploadController {
 
     @PostMapping("/{userId}")
     public ResponseEntity<String> handleVideoFileUpload(@PathVariable long userId, @RequestParam("file") MultipartFile file, RedirectAttributes redirectAttributes) {
-
         storageService.store(file, userId);
         //send jms message
         return ResponseEntity.status(HttpStatus.CREATED).body("Video successfully uploaded.");
@@ -32,7 +33,7 @@ public class VideoUploadController {
 
 
     @DeleteMapping("/{userId}/{title}")
-    public ResponseEntity<String> deleteVideoFile(@PathVariable long userId, @PathVariable String title) {
+    public ResponseEntity<String> deleteVideoFile(@PathVariable long userId, @PathVariable String title) throws IOException {
         storageService.delete(userId, title);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).body("Video successfully deleted");
     }

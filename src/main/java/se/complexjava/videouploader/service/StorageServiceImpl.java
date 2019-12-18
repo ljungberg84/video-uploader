@@ -61,11 +61,10 @@ public class StorageServiceImpl implements StorageService {
 
 
     @Override
-    public void delete(long userId, String title) {
+    public void delete(long userId, String title) throws IOException{
 
         String fileIdentifier = userId + ":" + title;
-        File file = new File("./videos/" + fileIdentifier);
-        if(!file.delete())
-            throw new StorageFileNotFoundException("error deleting file: " + fileIdentifier);
+
+        Files.deleteIfExists(Paths.get(rootLocation + "/" + fileIdentifier));
     }
 }
