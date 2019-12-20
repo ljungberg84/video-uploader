@@ -16,12 +16,18 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class StorageServiceImpl implements StorageService {
 
 
     private final Path rootLocation;
+
+    private static final String UPLOADER_TO_ENCODER_QUE = "uploader-to-encoder-que";
+    private static final String UPLOADER_TO_DATA_QUE = "uploader-to-data-que";
+    private static final String DELETED_VIDEO_FILE_TOPIC = "delete-video-File-topic";
 
     private JmsTemplate jmsTemplate;
 
@@ -56,16 +62,14 @@ public class StorageServiceImpl implements StorageService {
                 Files.copy(inputStream, this.rootLocation.resolve(filename),
                         StandardCopyOption.REPLACE_EXISTING);
             }
-            //message to encoder that new file is uploaded
-            jmsTemplate.convertAndSend("video-file", 1 + " " + filename);
+            //message to encoder-service that new file is uploaded
+            sendJMS(UPLOADER_TO_ENCODER_QUE, 1, userId, videoName);
             //message to data-service that file upload was successful
-            jmsTemplate.convertAndSend("file-uploaded", 1 + " " + filename);
+            sendJMS(UPLOADER_TO_DATA_QUE, 1, userId, videoName);
 
             return filename;
         }
         catch (IOException e) {
-            //message to data-service that upload failed
-            jmsTemplate.convertAndSend("file-uploaded", -1 + " " + filename);
             throw new StorageException("Failed to store file " + filename, e);
         }
     }
@@ -74,11 +78,20 @@ public class StorageServiceImpl implements StorageService {
     //TODO: all encoded versions of video should also be deleted
     @Override
     public void delete(long userId, String title) throws IOException{
-        String fileIdentifier = createFilename(userId, title);
-        Files.deleteIfExists(Paths.get(rootLocation + "/" + fileIdentifier));
-        //send message to data-service that video is deleted
-        jmsTemplate.convertAndSend("file-deleted", 1 + " " + fileIdentifier);
+        String fileName = createFilename(userId, title);
+        Files.deleteIfExists(Paths.get(rootLocation + "/" + fileName));
+
+        sendJMS(DELETED_VIDEO_FILE_TOPIC, 1, userId, title);
     }
+    private void sendJMS(String destination, int status, long userId, String title){
+        Map<String, String> message = new HashMap<>();
+        message.put("status", String.valueOf(status));
+        message.put("userId", String.valueOf(userId));
+        message.put("title", title);
+
+        jmsTemplate.convertAndSend(destination, message);
+    }
+
 
     public String createFilename(long userId, String title){
         return userId + "&" + title;
