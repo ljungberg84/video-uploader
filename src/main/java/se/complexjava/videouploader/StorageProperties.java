@@ -11,7 +11,7 @@ public class StorageProperties {
      */
 
     //set this value from outside?
-    private String location = "./videos/";
+    private String location = "/videos/";
 
     public String getLocation() {
         return location;

@@ -1,6 +1,8 @@
 package se.complexjava.videouploader.service;
 
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Service;
@@ -12,10 +14,7 @@ import se.complexjava.videouploader.exception.StorageException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
+import java.nio.file.*;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -30,6 +29,7 @@ public class StorageServiceImpl implements StorageService {
     private static final String DELETED_VIDEO_FILE_TOPIC = "delete-video-File-topic";
 
     private JmsTemplate jmsTemplate;
+    private Logger logger = LoggerFactory.getLogger(StorageServiceImpl.class);
 
     @Autowired
     public StorageServiceImpl(StorageProperties properties, JmsTemplate jmsTemplate) {
@@ -39,39 +39,38 @@ public class StorageServiceImpl implements StorageService {
 
 
     @Override
-    public String store(MultipartFile file, long userId) {
+    public String store(MultipartFile file, long userId) throws Exception{
 
         String videoName = StringUtils.cleanPath(file.getOriginalFilename());
         String filename = createFilename(userId, videoName);
 
-        try {
-            File f = new File(rootLocation + "/" + filename);
-            if(f.exists()){
-                throw  new StorageException(String.format("Video with name: %s already exists", videoName));
-            }
-            if (file.isEmpty()) {
-                throw new StorageException("Failed to store empty file " + videoName);
-            }
-            if (filename.contains("..")) {
-                // This is a security check
-                throw new StorageException(
-                        "Cannot store file with relative path outside current directory "
-                                + filename);
-            }
-            try (InputStream inputStream = file.getInputStream()) {
-                Files.copy(inputStream, this.rootLocation.resolve(filename),
-                        StandardCopyOption.REPLACE_EXISTING);
-            }
-            //message to encoder-service that new file is uploaded
-            sendJMS(UPLOADER_TO_ENCODER_QUE, 1, userId, videoName);
-            //message to data-service that file upload was successful
-            sendJMS(UPLOADER_TO_DATA_QUE, 1, userId, videoName);
+        File f = new File(rootLocation + "/" + filename);
+        if(f.exists()){
+            logger.info("file already exist: '{}'", videoName);
+            throw  new FileAlreadyExistsException(String.format("Video with name: %s already exists", videoName));
+        }
+        if (file.isEmpty()) {
+            throw new StorageException("Failed to store empty file " + filename);
+        }
+        if (filename.contains("..")) {
+            // This is a security check
+            throw new StorageException(
+                    "Cannot store file with relative path outside current directory "
+                            + filename);
+        }
+        try (InputStream inputStream = file.getInputStream()) {
+            Files.copy(inputStream, this.rootLocation.resolve(filename),
+                    StandardCopyOption.REPLACE_EXISTING);
+        }
+        //message to encoder-service that new file is uploaded
+        logger.info("video: '{}' saved", videoName);
+        logger.info("sending message to brokers");
+        sendJMS(UPLOADER_TO_ENCODER_QUE, 1, userId, videoName);
+        //message to data-service that file upload was successful
+        sendJMS(UPLOADER_TO_DATA_QUE, 1, userId, videoName);
 
-            return filename;
-        }
-        catch (IOException e) {
-            throw new StorageException("Failed to store file " + filename, e);
-        }
+        return filename;
+
     }
 
 

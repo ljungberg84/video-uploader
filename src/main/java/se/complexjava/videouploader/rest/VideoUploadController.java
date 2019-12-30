@@ -25,7 +25,7 @@ public class VideoUploadController {
 
     //Todo: set a proper filelimit for upload in application properties
     @PostMapping("/{userId}")
-    public ResponseEntity<String> handleVideoFileUpload(@PathVariable long userId, @RequestParam("file") MultipartFile file, RedirectAttributes redirectAttributes) {
+    public ResponseEntity<String> handleVideoFileUpload(@PathVariable long userId, @RequestParam("file") MultipartFile file, RedirectAttributes redirectAttributes) throws Exception{
         String filename = storageService.store(file, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body("Video: " + filename + " successfully uploaded.");
     }
