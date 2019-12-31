@@ -1,5 +1,6 @@
 package se.complexjava.videouploader;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties("storage")
@@ -11,7 +12,9 @@ public class StorageProperties {
      */
 
     //set this value from outside?
-    private String location = "/videos/";
+    @Value("${file_location}")
+    //private String location = "/videos/";
+    private String location;
 
     public String getLocation() {
         return location;
