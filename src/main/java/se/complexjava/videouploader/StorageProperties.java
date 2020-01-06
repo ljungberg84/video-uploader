@@ -11,7 +11,6 @@ public class StorageProperties {
      * Folder location for storing files
      */
 
-    //set this value from outside?
     @Value("${file_location}")
     //private String location = "/videos/";
     private String location;
