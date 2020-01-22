@@ -6,7 +6,7 @@ import java.io.IOException;
 
 public interface StorageService {
 
-    String store(MultipartFile file, long userId) throws Exception;
+    String store(MultipartFile file, long userId, long videoId) throws Exception;
 
-    void delete(long userId, String title) throws IOException;
+    void delete(long userId, long videoId) throws IOException;
 }

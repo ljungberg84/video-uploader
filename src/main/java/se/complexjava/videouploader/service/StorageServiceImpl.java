@@ -1,12 +1,10 @@
 package se.complexjava.videouploader.service;
 
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import se.complexjava.videouploader.StorageProperties;
 import se.complexjava.videouploader.exception.StorageException;
@@ -20,7 +18,6 @@ import java.util.Map;
 
 @Service
 public class StorageServiceImpl implements StorageService {
-
 
     private final Path rootLocation;
 
@@ -37,62 +34,53 @@ public class StorageServiceImpl implements StorageService {
         this.rootLocation = Paths.get(properties.getLocation());
     }
 
-
     @Override
-    public String store(MultipartFile file, long userId) throws Exception{
+    public String store(MultipartFile file, long userId, long videoId) throws Exception {
 
-        String videoName = StringUtils.cleanPath(file.getOriginalFilename());
-        String filename = createFilename(userId, videoName);
+        String fileName = userId + "\\" + videoId + "\\" + videoId + ".mp4";
 
-        File f = new File(rootLocation + "/" + filename);
-        if(f.exists()){
-            logger.info("file already exist: '{}'", videoName);
-            throw  new FileAlreadyExistsException(String.format("Video with name: %s already exists", videoName));
+        File dir = new File(rootLocation + "\\" + userId + "\\" + videoId + "\\");
+        dir.mkdirs();
+
+        File f = new File(dir.getPath() + fileName);
+
+        if (f.exists()) {
+            logger.info("file already exist: '{}'", fileName);
+            throw  new FileAlreadyExistsException(String.format("Video with name: %s already exists", videoId));
         }
         if (file.isEmpty()) {
-            throw new StorageException("Failed to store empty file " + filename);
+            throw new StorageException("Failed to store empty file " + fileName);
         }
-        if (filename.contains("..")) {
-            // This is a security check
-            throw new StorageException(
-                    "Cannot store file with relative path outside current directory "
-                            + filename);
-        }
+
         try (InputStream inputStream = file.getInputStream()) {
-            Files.copy(inputStream, this.rootLocation.resolve(filename),
+            Files.copy(inputStream, this.rootLocation.resolve(fileName),
                     StandardCopyOption.REPLACE_EXISTING);
         }
-        //message to encoder-service that new file is uploaded
-        logger.info("video: '{}' saved", videoName);
-        logger.info("sending message to brokers");
-        sendJMS(UPLOADER_TO_ENCODER_QUE, 1, userId, videoName);
-        //message to data-service that file upload was successful
-        sendJMS(UPLOADER_TO_DATA_QUE, 1, userId, videoName);
 
-        return filename;
+        logger.info("video: '{}' saved", videoId);
+        logger.info("sending message to brokers");
+        sendJMS(UPLOADER_TO_ENCODER_QUE, 1, userId, videoId);
+        //message to data-service that file upload was successful
+        sendJMS(UPLOADER_TO_DATA_QUE, 1, userId, videoId);
+
+        return String.valueOf(videoId);
 
     }
-
 
     //TODO: all encoded versions of video should also be deleted
     @Override
-    public void delete(long userId, String title) throws IOException{
-        String fileName = createFilename(userId, title);
-        Files.deleteIfExists(Paths.get(rootLocation + "/" + fileName));
+    public void delete(long userId, long videoId) throws IOException{
+        Files.deleteIfExists(Paths.get(rootLocation + "/" + userId + "/" + videoId));
 
-        sendJMS(DELETED_VIDEO_FILE_TOPIC, 1, userId, title);
+        sendJMS(DELETED_VIDEO_FILE_TOPIC, 1, userId, videoId);
     }
-    private void sendJMS(String destination, int status, long userId, String title){
+
+    private void sendJMS(String destination, int status, long userId, long videoId){
         Map<String, String> message = new HashMap<>();
         message.put("status", String.valueOf(status));
         message.put("userId", String.valueOf(userId));
-        message.put("title", title);
+        message.put("videoId", String.valueOf(videoId));
 
         jmsTemplate.convertAndSend(destination, message);
-    }
-
-
-    public String createFilename(long userId, String title){
-        return userId + "&" + title;
     }
 }

@@ -7,7 +7,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import se.complexjava.videouploader.service.StorageService;
 
 import java.io.IOException;
@@ -24,16 +23,15 @@ public class VideoUploadController {
     }
 
     //Todo: set a proper filelimit for upload in application properties
-    @PostMapping("/{userId}")
-    public ResponseEntity<String> handleVideoFileUpload(@PathVariable long userId, @RequestParam("file") MultipartFile file, RedirectAttributes redirectAttributes) throws Exception{
-        String filename = storageService.store(file, userId);
+    @PostMapping("/{userId}/{videoId}")
+    public ResponseEntity<String> handleVideoFileUpload(@PathVariable long userId, @PathVariable long videoId, @RequestParam("file") MultipartFile file) throws Exception{
+        String filename = storageService.store(file, userId, videoId);
         return ResponseEntity.status(HttpStatus.CREATED).body("Video: " + filename + " successfully uploaded.");
     }
 
-
-    @DeleteMapping("/{userId}/{title}")
-    public ResponseEntity<String> deleteVideoFile(@PathVariable long userId, @PathVariable String title) throws IOException {
-        storageService.delete(userId, title);
+    @DeleteMapping("/{userId}/{videoId}")
+    public ResponseEntity<String> deleteVideoFile(@PathVariable long userId, @PathVariable long videoId) throws IOException {
+        storageService.delete(userId, videoId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).body("Video successfully deleted");
     }
 }
